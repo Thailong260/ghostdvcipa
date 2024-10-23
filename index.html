@@ -1,0 +1,229 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GHOST - DVC IPA</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            padding: 20px 0;
+            background-color: #6200ea;
+            color: #fff;
+        }
+
+        #codeContainer {
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .code-section {
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 3px rgba(0,0,0,0.05);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+        }
+
+        input[type="text"] {
+            width: calc(100% - 24px);
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #6200ea;
+            color: white;
+            padding: 10px 20px;
+            margin: 5px 0;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #3700b3;
+        }
+
+        .code-passages {
+            background-color: #e8eaf6;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+
+        @media (max-width: 600px) {
+            input[type="text"] {
+                width: calc(100% - 16px);
+            }
+
+            button {
+                width: 100%;
+                margin: 5px 0;
+            }
+        }
+    </style>
+    <script>
+        function updateCode(offsetInput, byteInput, activeOutputElement, deactiveOutputElement, customActiveOutputElement, customDeactiveOutputElement) {
+            const offset = offsetInput.value;
+            const byte = byteInput.value;
+
+            const activeCode = `ActiveCodePatch((char*)[NSSENCRYPT("Frameworks/UnityFramework.framework/UnityFramework") UTF8String], ENCRYPTOFFSET("${offset}"), (char*)[NSSENCRYPT("${byte}") UTF8String]);`;
+            const deactiveCode = `DeactiveCodePatch((char*)[NSSENCRYPT("Frameworks/UnityFramework.framework/UnityFramework") UTF8String], ENCRYPTOFFSET("${offset}"), (char*)[NSSENCRYPT("${byte}") UTF8String]);`;
+
+            const customActiveCode = `ActiveCodePatch("Frameworks/UnityFramework.framework/UnityFramework", ${offset}, "${byte}");`;
+            const customDeactiveCode = `DeactiveCodePatch("Frameworks/UnityFramework.framework/UnityFramework", ${offset}, "${byte}");`;
+
+            activeOutputElement.innerText = activeCode;
+            deactiveOutputElement.innerText = deactiveCode;
+            customActiveOutputElement.innerText = customActiveCode;
+            customDeactiveOutputElement.innerText = customDeactiveCode;
+        }
+
+        function addCodeSection() {
+            const container = document.getElementById("codeContainer");
+
+            const codeSection = document.createElement("div");
+            codeSection.className = "code-section";
+
+            const offsetLabel = document.createElement("label");
+            offsetLabel.innerText = "Enter Offset: ";
+
+            const offsetInput = document.createElement("input");
+            offsetInput.type = "text";
+            offsetInput.placeholder = "e.g., 0x1000178dc";
+
+            const byteLabel = document.createElement("label");
+            byteLabel.innerText = "Enter Byte: ";
+
+            const byteInput = document.createElement("input");
+            byteInput.type = "text";
+            byteInput.placeholder = "e.g., C0035FD6";
+
+            const activePre = document.createElement("pre");
+            activePre.className = "code-passages";
+
+            const deactivePre = document.createElement("pre");
+            deactivePre.className = "code-passages";
+
+            const customActivePre = document.createElement("pre");
+            customActivePre.className = "code-passages";
+
+            const customDeactivePre = document.createElement("pre");
+            customDeactivePre.className = "code-passages";
+
+            offsetInput.oninput = byteInput.oninput = function() {
+                updateCode(offsetInput, byteInput, activePre, deactivePre, customActivePre, customDeactivePre);
+            };
+
+            const buttonSave = document.createElement("button");
+            buttonSave.innerText = "Confirm";
+            buttonSave.onclick = function() {
+                alert("Offset and Byte saved!");
+            };
+
+            const buttonCopyActive = document.createElement("button");
+            buttonCopyActive.innerText = "Copy Active";
+            buttonCopyActive.onclick = function() {
+                navigator.clipboard.writeText(activePre.innerText).then(() => {
+                    alert("Active code copied!");
+                });
+            };
+
+            const buttonCopyDeactive = document.createElement("button");
+            buttonCopyDeactive.innerText = "Copy Deactive";
+            buttonCopyDeactive.onclick = function() {
+                navigator.clipboard.writeText(deactivePre.innerText).then(() => {
+                    alert("Deactive code copied!");
+                });
+            };
+
+            const buttonCopyCustomActive = document.createElement("button");
+            buttonCopyCustomActive.innerText = "Copy Custom Active";
+            buttonCopyCustomActive.onclick = function() {
+                navigator.clipboard.writeText(customActivePre.innerText).then(() => {
+                    alert("Custom active code copied!");
+                });
+            };
+
+            const buttonCopyCustomDeactive = document.createElement("button");
+            buttonCopyCustomDeactive.innerText = "Copy Custom Deactive";
+            buttonCopyCustomDeactive.onclick = function() {
+                navigator.clipboard.writeText(customDeactivePre.innerText).then(() => {
+                    alert("Custom deactive code copied!");
+                });
+            };
+
+            codeSection.appendChild(offsetLabel);
+            codeSection.appendChild(offsetInput);
+            codeSection.appendChild(byteLabel);
+            codeSection.appendChild(byteInput);
+            codeSection.appendChild(buttonSave);
+            codeSection.appendChild(document.createElement("br"));
+            codeSection.appendChild(activePre);
+            codeSection.appendChild(buttonCopyActive);
+            codeSection.appendChild(document.createElement("br"));
+            codeSection.appendChild(deactivePre);
+            codeSection.appendChild(buttonCopyDeactive);
+            codeSection.appendChild(document.createElement("br"));
+            codeSection.appendChild(customActivePre);
+            codeSection.appendChild(buttonCopyCustomActive);
+            codeSection.appendChild(document.createElement("br"));
+            codeSection.appendChild(customDeactivePre);
+            codeSection.appendChild(buttonCopyCustomDeactive);
+
+            container.appendChild(codeSection);
+
+            // Initialize with default code
+            updateCode(offsetInput, byteInput, activePre, deactivePre, customActivePre, customDeactivePre);
+        }
+
+        function copyAllContents() {
+            const preElements = document.querySelectorAll("#codeContainer pre");
+            let allText = "";
+            preElements.forEach(preElement => {
+                allText += preElement.innerText + "\n";
+            });
+            navigator.clipboard.writeText(allText).then(() => {
+                alert("All content copied to clipboard!");
+            }).catch(err => {
+                console.error("Could not copy text: ", err);
+            });
+        }
+
+        window.onload = function() {
+            addCodeSection(); // Thêm phần code ban đầu
+        };
+    </script>
+</head>
+<body>
+    <h1>GHOST - DVC IPA</h1>
+    <div id="codeContainer"></div>
+    <button onclick="addCodeSection()">Add Another Offset</button>
+    <button onclick="copyAllContents()">Copy All</button>
+</body>
+</html>
