@@ -88,6 +88,8 @@
         }
     </style>
     <script>
+        let sectionCount = 0;  // Biến đếm toàn cục để giữ số thứ tự của phần
+
         function updateCode(offsetInput, byteInput, activeOutputElement, deactiveOutputElement, customActiveOutputElement, customDeactiveOutputElement) {
             const offset = offsetInput.value;
             const byte = byteInput.value;
@@ -105,10 +107,16 @@
         }
 
         function addCodeSection() {
+            sectionCount++;  // Tăng số thứ tự của phần mỗi khi hàm được gọi
+
             const container = document.getElementById("codeContainer");
 
             const codeSection = document.createElement("div");
             codeSection.className = "code-section";
+
+            const sectionTitle = document.createElement("h2");
+            sectionTitle.innerText = `Section ${sectionCount}`;  // Gán tiêu đề có số thứ tự
+            codeSection.appendChild(sectionTitle);  // Thêm tiêu đề vào phần code section
 
             const offsetLabel = document.createElement("label");
             offsetLabel.innerText = "Enter Offset: ";
@@ -193,7 +201,7 @@
             codeSection.appendChild(customActivePre);
             codeSection.appendChild(buttonCopyCustomActive);
             codeSection.appendChild(document.createElement("br"));
-            codeSection.appendChild(customDeactivePre);
+          	codeSection.appendChild(customDeactivePre);
             codeSection.appendChild(buttonCopyCustomDeactive);
 
             container.appendChild(codeSection);
