@@ -12,48 +12,47 @@
             margin: 0;
             padding: 0;
         }
-
         h1 {
-            color: #333;
+            color: #fff;
             text-align: center;
             padding: 20px 0;
+            margin: 0;
             background-color: #6200ea;
-            color: #fff;
         }
-
         #codeContainer {
             max-width: 800px;
             margin: 30px auto;
             padding: 20px;
             background-color: #fff;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
-
-        .code-section {
+        .input-section, .code-section {
             margin-bottom: 20px;
-            padding: 10px;
+            padding: 15px;
             background-color: #f9f9f9;
             border-radius: 5px;
             border: 1px solid #ddd;
-            box-shadow: 0 2px 3px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 3px rgba(0, 0, 0, 0.05);
         }
-
         label {
             display: block;
             margin-bottom: 5px;
             color: #555;
+            font-weight: bold;
         }
-
-        input[type="text"] {
-            width: calc(100% - 24px);
+        input[type="text"], textarea {
+            width: calc(100% - 22px);
             padding: 10px;
             margin-bottom: 10px;
             border: 1px solid #ccc;
             border-radius: 4px;
             box-sizing: border-box;
+            font-size: 14px;
         }
-
+        textarea {
+            height: 100px;
+        }
         button {
             background-color: #6200ea;
             color: white;
@@ -63,24 +62,45 @@
             border-radius: 4px;
             cursor: pointer;
             transition: background-color 0.3s ease;
+            display: inline-block;
+            font-size: 14px;
         }
-
         button:hover {
             background-color: #3700b3;
         }
-
         .code-passages {
-            background-color: #e8eaf6;
-            padding: 10px;
+            background-color: #e3f2fd;
+            padding: 15px;
+            margin-bottom: 5px;
+            border-left: 3px solid #42a5f5;
             border-radius: 4px;
             overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-
+        .code-block-container {
+            margin-bottom: 20px;
+        }
+        .copy-button {
+            display: block;
+            margin: 5px auto;
+            background-color: #42a5f5;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background-color 0.3s ease;
+        }
+        .copy-button:hover {
+            background-color: #1e88e5;
+        }
         @media (max-width: 600px) {
-            input[type="text"] {
+            input[type="text"], textarea {
                 width: calc(100% - 16px);
             }
-
             button {
                 width: 100%;
                 margin: 5px 0;
@@ -89,6 +109,43 @@
     </style>
     <script>
         let sectionCount = 0;  // Biến đếm toàn cục để giữ số thứ tự của phần
+
+        function processTextInput(inputElement, container) {
+            const text = inputElement.value;
+            const regex = /Modify detected at: .+ \(IDA: (.+?)\)([\s\S]*?)(?=Modify detected|$)/g;
+            const allMatches = [...text.matchAll(regex)].reverse();
+            const modRegex = /Org:\s*0x[\da-fA-F]+,\s*Mod:\s*0x([\da-fA-F]+)/g;
+            const uniquePairs = new Map();
+
+            allMatches.forEach(match => {
+                const idaOffset = match[1];
+                const modificationsBlock = match[2];
+                let modValue;
+                let byteSequence = '';
+
+                while ((modValue = modRegex.exec(modificationsBlock)) !== null) {
+                    byteSequence += modValue[1].padStart(2, '0').toUpperCase();
+                }
+
+                if (!uniquePairs.has(idaOffset)) {
+                    uniquePairs.set(idaOffset, byteSequence);
+                }
+            });
+
+            container.innerHTML = '';
+            uniquePairs.forEach((byteSequence, ida) => {
+                const offsetString = `"${ida}"`;
+                
+                const activeCode = `ActiveCodePatch((char*)[NSSENCRYPT("Frameworks/UnityFramework.framework/UnityFramework") UTF8String], ENCRYPTOFFSET(${offsetString}), (char*)[NSSENCRYPT("${byteSequence}") UTF8String]);`;
+                const deactiveCode = `DeactiveCodePatch((char*)[NSSENCRYPT("Frameworks/UnityFramework.framework/UnityFramework") UTF8String], ENCRYPTOFFSET(${offsetString}), (char*)[NSSENCRYPT("${byteSequence}") UTF8String]);`;
+                
+                const activeDiv = createCodeDiv(activeCode);
+                const deactiveDiv = createCodeDiv(deactiveCode);
+                
+                container.appendChild(activeDiv);
+                container.appendChild(deactiveDiv);
+            });
+        }
 
         function updateCode(offsetInput, byteInput, activeOutputElement, deactiveOutputElement, customActiveOutputElement, customDeactiveOutputElement) {
             const offset = offsetInput.value;
@@ -106,8 +163,51 @@
             customDeactiveOutputElement.innerText = customDeactiveCode;
         }
 
+        function createCodeDiv(code) {
+            const codeDiv = document.createElement("div");
+            codeDiv.className = "code-block-container";
+
+            const codeContent = document.createElement("div");
+            codeContent.className = "code-passages";
+            codeContent.innerText = code;
+
+            const copyButton = document.createElement("button");
+            copyButton.className = "copy-button";
+            copyButton.innerText = "Sao chép";
+            copyButton.onclick = function() {
+                navigator.clipboard.writeText(code).then(() => {
+                    alert("Kết quả đã được sao chép!");
+                }).catch(err => {
+                    console.error("Error copying text: ", err);
+                });
+            };
+
+            codeDiv.appendChild(codeContent);
+            codeDiv.appendChild(copyButton);
+            return codeDiv;
+        }
+
+        
+        function reverseTextBlocks(inputElement) {
+            const text = inputElement.value;
+            const blocks = text.split(/(?=Modify detected)/).reverse();
+            inputElement.value = blocks.join('');
+        }
+
+        function copyAllContents(container) {
+            const allCodes = Array.from(container.querySelectorAll('.code-passages'))
+                .map(div => div.innerText)
+                .join("\n");
+            
+            navigator.clipboard.writeText(allCodes).then(() => {
+                alert("Tất cả kết quả đã được sao chép!");
+            }).catch(err => {
+                console.error("Error copying text: ", err);
+            });
+        }
+
         function addCodeSection() {
-            sectionCount++;  // Tăng số thứ tự của phần mỗi khi hàm được gọi
+            sectionCount++; // Tăng số thứ tự của phần mỗi khi hàm được gọi
 
             const container = document.getElementById("codeContainer");
 
@@ -115,18 +215,18 @@
             codeSection.className = "code-section";
 
             const sectionTitle = document.createElement("h2");
-            sectionTitle.innerText = `Section ${sectionCount}`;  // Gán tiêu đề có số thứ tự
-            codeSection.appendChild(sectionTitle);  // Thêm tiêu đề vào phần code section
+            sectionTitle.innerText = `Section ${sectionCount}`; // Gán tiêu đề có số thứ tự
+            codeSection.appendChild(sectionTitle); // Thêm tiêu đề vào phần code section
 
             const offsetLabel = document.createElement("label");
-            offsetLabel.innerText = "Enter Offset: ";
+            offsetLabel.innerText = "Nhập offset: ";
 
             const offsetInput = document.createElement("input");
             offsetInput.type = "text";
             offsetInput.placeholder = "e.g., 0x1000178dc";
 
             const byteLabel = document.createElement("label");
-            byteLabel.innerText = "Enter Byte: ";
+            byteLabel.innerText = "Nhập byte: ";
 
             const byteInput = document.createElement("input");
             byteInput.type = "text";
@@ -149,40 +249,40 @@
             };
 
             const buttonSave = document.createElement("button");
-            buttonSave.innerText = "Confirm";
+            buttonSave.innerText = "Xác nhận";
             buttonSave.onclick = function() {
-                alert("Offset and Byte saved!");
+                alert("Offset và Byte đã được lưu!");
             };
 
             const buttonCopyActive = document.createElement("button");
-            buttonCopyActive.innerText = "Copy Active";
+            buttonCopyActive.innerText = "Sao chép Active";
             buttonCopyActive.onclick = function() {
                 navigator.clipboard.writeText(activePre.innerText).then(() => {
-                    alert("Active code copied!");
+                    alert("Mã Active đã được sao chép!");
                 });
             };
 
             const buttonCopyDeactive = document.createElement("button");
-            buttonCopyDeactive.innerText = "Copy Deactive";
+            buttonCopyDeactive.innerText = "Sao chép Deactive";
             buttonCopyDeactive.onclick = function() {
                 navigator.clipboard.writeText(deactivePre.innerText).then(() => {
-                    alert("Deactive code copied!");
+                    alert("Mã Deactive đã được sao chép!");
                 });
             };
 
             const buttonCopyCustomActive = document.createElement("button");
-            buttonCopyCustomActive.innerText = "Copy Custom Active";
+            buttonCopyCustomActive.innerText = "Sao chép Custom Active";
             buttonCopyCustomActive.onclick = function() {
                 navigator.clipboard.writeText(customActivePre.innerText).then(() => {
-                    alert("Custom active code copied!");
+                    alert("Mã custom active đã được sao chép!");
                 });
             };
 
             const buttonCopyCustomDeactive = document.createElement("button");
-            buttonCopyCustomDeactive.innerText = "Copy Custom Deactive";
+            buttonCopyCustomDeactive.innerText = "Sao chép Custom Deactive";
             buttonCopyCustomDeactive.onclick = function() {
                 navigator.clipboard.writeText(customDeactivePre.innerText).then(() => {
-                    alert("Custom deactive code copied!");
+                    alert("Mã custom deactive đã được sao chép!");
                 });
             };
 
@@ -201,7 +301,7 @@
             codeSection.appendChild(customActivePre);
             codeSection.appendChild(buttonCopyCustomActive);
             codeSection.appendChild(document.createElement("br"));
-          	codeSection.appendChild(customDeactivePre);
+            codeSection.appendChild(customDeactivePre);
             codeSection.appendChild(buttonCopyCustomDeactive);
 
             container.appendChild(codeSection);
@@ -210,20 +310,45 @@
             updateCode(offsetInput, byteInput, activePre, deactivePre, customActivePre, customDeactivePre);
         }
 
-        function copyAllContents() {
-            const preElements = document.querySelectorAll("#codeContainer pre");
-            let allText = "";
-            preElements.forEach(preElement => {
-                allText += preElement.innerText + "\n";
-            });
-            navigator.clipboard.writeText(allText).then(() => {
-                alert("All content copied to clipboard!");
-            }).catch(err => {
-                console.error("Could not copy text: ", err);
-            });
-        }
-
         window.onload = function() {
+            const container = document.getElementById("codeContainer");
+
+            const inputSection = document.createElement("div");
+            inputSection.className = "input-section";
+
+            const inputLabel = document.createElement("label");
+            inputLabel.innerText = "Nhập dữ liệu từ IDA:";
+            inputSection.appendChild(inputLabel);
+
+            const textInput = document.createElement("textarea");
+            inputSection.appendChild(textInput);
+
+            const buttonReverse = document.createElement("button");
+            buttonReverse.innerText = "Đảo ngược các khối văn bản";
+            buttonReverse.onclick = function() {
+                reverseTextBlocks(textInput);
+            };
+
+            const buttonProcess = document.createElement("button");
+            buttonProcess.innerText = "Chuyển đổi và lọc";
+            const outputContainer = document.createElement("div");
+
+            buttonProcess.onclick = function() {
+                processTextInput(textInput, outputContainer);
+            };
+
+            const buttonCopyAll = document.createElement("button");
+            buttonCopyAll.innerText = "Sao Chép Tất Cả";
+            buttonCopyAll.onclick = function() {
+                copyAllContents(outputContainer);
+            };
+
+            inputSection.appendChild(buttonReverse);
+            inputSection.appendChild(buttonProcess);
+            inputSection.appendChild(outputContainer);
+            inputSection.appendChild(buttonCopyAll);
+            container.appendChild(inputSection);
+            
             addCodeSection(); // Thêm phần code ban đầu
         };
     </script>
@@ -231,7 +356,7 @@
 <body>
     <h1>GHOST - DVC IPA</h1>
     <div id="codeContainer"></div>
-    <button onclick="addCodeSection()">Add Another Offset</button>
-    <button onclick="copyAllContents()">Copy All</button>
+    <button onclick="addCodeSection()">Thêm Offset Khác</button>
+    <button onclick="copyAllContents()">Sao Chép Tất Cả</button>
 </body>
 </html>
